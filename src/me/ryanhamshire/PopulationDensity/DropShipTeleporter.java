@@ -19,6 +19,8 @@
 package me.ryanhamshire.PopulationDensity;
 
 import org.bukkit.GameMode;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.LivingEntity;
@@ -61,23 +63,35 @@ public class DropShipTeleporter implements Listener
     public void onEntityDamage(EntityDamageEvent event)
     {
         Entity entity = event.getEntity();
-        //when an entity has fall damage immunity, it lasts for only ONE fall damage check
-        if (event.getCause() == EntityDamageEvent.DamageCause.FALL)
-        {
-            if (isFallDamageImmune(entity))
-            {
-                event.setCancelled(true);
-                removeFallDamageImmunity(entity);
-                if (entity.getType() == EntityType.PLAYER)
-                {
-                    Player player = (Player)entity;
-                    if (!player.hasPermission("populationdensity.teleportanywhere"))
-                    {
-                        player.getWorld().createExplosion(player.getLocation(), 0);
-                    }
-                }
-            }
-        }
+
+        if (event.getCause() != EntityDamageEvent.DamageCause.FALL) return;
+        if (!isFallDamageImmune(entity)) return;
+
+        // Prevent the fall damage
+        event.setCancelled(true);
+        removeFallDamageImmunity(entity);
+
+        if (entity.getType() != EntityType.PLAYER) return;
+
+        Player player = (Player) entity;
+
+        // Skip effect if they have permission to teleport anywhere
+        if (player.hasPermission("populationdensity.teleportanywhere")) return;
+
+        player.getWorld().spawnParticle(
+                Particle.EXPLOSION,
+                player.getLocation(),
+                1,
+                0.0, 0.0, 0.0,
+                0.0
+        );
+
+        player.getWorld().playSound(
+                player.getLocation(),
+                Sound.ENTITY_GENERIC_EXPLODE,
+                0.3f,
+                1.0f
+        );
     }
 
     HashSet<UUID> fallImmunityList = new HashSet<>();
